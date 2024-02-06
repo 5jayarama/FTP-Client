@@ -149,6 +149,23 @@ class FTPClient:
         response = self.receive_response()
         print(response)
 
+    def set_connection_type(self, type):
+        # Set the transfer type (e.g., ASCII or binary)
+        self.send_command(f'TYPE {type}')
+        response = self.receive_response()
+        print(response)
+
+    def set_connection_mode(self, mode):
+        # Set the transfer mode (e.g., stream)
+        self.send_command(f'MODE {mode}')
+        response = self.receive_response()
+        print(response)
+
+    def set_file_mode(self, file_mode):
+        # Set the file structure (e.g., file-oriented)
+        self.send_command(f'STRU {file_mode}')
+        response = self.receive_response()
+        print(response)
 
 def main(args):
     #read and organize the given arguments (should be 3 to 4 of them, 0 indexed)
@@ -175,6 +192,10 @@ def main(args):
     client = FTPClient(server_address, server_port)
     client.connect()
     client.login(username, password)
+
+    client.set_connection_type('I') 
+    client.set_connection_mode('S')  
+    client.set_file_mode('F')  
 
     # Enter passive mode
     client.passive_mode()
