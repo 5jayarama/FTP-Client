@@ -198,6 +198,16 @@ def main(args):
         # Extract the source and destination from the provided arguments
         local_path, remote_path = source_dest, directory_path
         client.store_file(local_path, remote_path)
+    elif command == 'store':
+        # Upload a file to the server
+        local_path, remote_path = source_dest, os.path.basename(source_dest)
+        client.store_file(local_path, remote_path)
+    elif command == 'retr':
+        # Download a file from the server
+        remote_file = os.path.basename(directory_path)
+        local_path = source_dest
+        client.retrieve_file(remote_file, local_path)
+    
     else:
         print("Invalid command")
         sys.exit(1)
