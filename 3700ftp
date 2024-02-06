@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+import socket
+import os
+import sys
+import urllib.parse
+
+class FTPClient:
+    def __init__(self, server_address, server_port):
+        #initialize FTPClient with server address and port
+        self.server_address = server_address
+        self.server_port = server_port
+        self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.data_socket = None #initialize data socket
+
+    def connect(self):
+        #connect to FTP server using TCP control socket
+        self.control_socket.connect((self.server_address, self.server_port))
+        response = self.receive_response()
+        print(response)
+
+    def login(self, username, password):
+        #use USER command to login with given username and password
+        self.send_command(f'USER {username}')
+        response = self.receive_response()
+        print(response)
+
+        if '331' in response:
+            self.send_command(f'PASS {password}')
+            response = self.receive_response()
+            print(response)
+
+    def send_command(self, command):
+        #send FTP commands to server using control socket
+        self.control_socket.sendall(f'{command}\r\n'.encode())
+
+    def receive_response(self):
+        #recive responses that the FTP server sends us
+        response = ''
+        while True:
+            data = self.control_socket.recv(1024).decode()
+            response += data
+            if not data or data[-2:] == '\r\n':
+                break
+        return response
+
+    def close(self):
+        #send QUIT command to close the FTP connection
+        self.send_command('QUIT')
+        self.control_socket.close()
+
+    #MKD, and RMD
+    def make_directory(self, directory_path):
+        # Use MKD command to make a remote directory
+        self.send_command(f'MKD {directory_path}')
+        response = self.receive_response()
+        print(response)
+
+    def remove_directory(self, directory_path):
+        # Use RMD command to remove a remote directory
+        self.send_command(f'RMD {directory_path}')
+        response = self.receive_response()
+        print(response)
+
+    #PASV, and LIST
+    def passive_mode(self):
+        # Implement PASV command to enter passive mode + recieve data channel details
+        self.send_command('PASV')
+        response = self.receive_response()
+        print(response)
+        self.create_data_channel(response)
+
+    def list_directory(self, directory_path):
+        # Use LIST command to list the contents of remote directory
+        self.send_command(f'LIST {directory_path}')
+        response = self.receive_response()
+        print(response)
+        file_list = self.receive_file_list() #for list directory we need to get file list from data socket
+        print("List directory:\n".join(file_list))
+    
+    def receive_file_list(self):
+        # Receive the file list from the data socket
+        file_list = []
+        while True:
+            data = self.data_socket.recv(1024).decode()
+            if not data:
+                break
+            file_list.append(data)
+        return file_list
+
+    #STORE, RETR, and DELE
+    def store_file(self, local_path, remote_path):
+        # Use STOR command to initiate data transfer
+        self.send_command(f'STOR {remote_path}')
+        response = self.receive_response()
+        print(response)
+
+        # Parse given response to get IP and port for data channel
+        data_socket = self.create_data_channel(response)
+
+        # Transfer file data
+        with open(local_path, 'rb') as file:
+            data = file.read(1024)
+            while data:
+                data_socket.sendall(data)
+                data = file.read(1024)
+
+        # Close the data channel
+        data_socket.close()
+
+    def create_data_channel(self, response):
+        # Extract the IP address and port information from the response
+        try:
+            start = response.index('(') + 1
+            end = response.index(')')
+            data_info = response[start:end] #store the response which holds desired information
+            data_parts = [int(part) for part in data_info.split(',')] #split ip into parts
+            data_ip = '.'.join(map(str, data_parts[:4])) #joins the first four parts with periods to reconstruct the ip
+            data_port = (data_parts[4] << 8) + data_parts[5] #use remaining 5th and 6th parts to construct port
+        except ValueError as e:
+            print(f"Error parsing: {e}") #throw error if parsing fauls
+            return None
+
+        #create a new socket for the data channel, accessible in init for the list directory function
+        self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+        self.data_socket.connect((data_ip, data_port))
+
+    def retrieve_file(self, remote_path, local_path):
+        # Use RETR command to retrieve data
+        self.send_command(f'RETR {remote_path}')
+        response = self.receive_response()
+        print(response)
+
+        # Parse response to get IP and port for data channel
+        data_socket = self.create_data_channel(response)
+
+        # Receive File Data
+        with open(local_path, 'wb') as file:
+            data = data_socket.recv(1024)
+            while data:
+                file.write(data)
+                data = data_socket.recv(1024)
+
+        # Close Data Channel
+        data_socket.close()
+
+    def delete_file(self, remote_path):
+        #Use DELE command to delete a file
+        self.send_command(f'DELE {remote_path}')
+        response = self.receive_response()
+        print(response)
+
+
+def main(args):
+    #read and organize the given arguments (should be 3 to 4 of them, 0 indexed)
+    command = args[1]
+    if (len(args) == 4) :
+        source_dest = args[2]
+    ftp_url = args[-1] #last argument referred as -1
+
+    #parse the provided ftp url (unsure how this works)
+    parsed_url = urllib.parse.urlparse(ftp_url)
+    #error checking for parsing ftp url
+    if parsed_url.scheme != 'ftp':
+        print("Parsing FTP URL failure. Provide valid FTP URL.")
+        sys.exit(1)
+
+    #store ftp server details from parsed url
+    server_address = parsed_url.hostname
+    server_port = parsed_url.port or 21 # use port if given, else use 21
+    username = parsed_url.username or "anonymous" #same logic as above
+    password = parsed_url.password
+    directory_path = parsed_url.path
+
+    #create an FTPClient, make connection, and attempt login.
+    client = FTPClient(server_address, server_port)
+    client.connect()
+    client.login(username, password)
+
+    # Enter passive mode
+    client.passive_mode()
+
+    # Execute the corresponding FTP operation based on the command
+    if command == 'ls':
+        client.list_directory(directory_path)
+    elif command == 'rm':
+        # Extract the file to be deleted from the provided URL
+        remote_file = os.path.basename(directory_path)
+        client.delete_file(remote_file)
+    elif command == 'rmdir':
+        # Assuming the last component of the path is the directory to be removed
+        remote_directory = os.path.basename(directory_path)
+        client.remove_directory(remote_directory)
+    elif command == 'mkdir':
+        # Assuming the last component of the path is the directory to be created
+        new_directory = os.path.basename(directory_path)
+        client.make_directory(new_directory)
+    elif command == 'cp':
+        # Extract the source and destination from the provided arguments
+        local_path, remote_path = source_dest, directory_path
+        client.store_file(local_path, remote_path)
+    else:
+        print("Invalid command")
+        sys.exit(1)
+
+    # Close the FTP connection
+    client.close()
+
+#__main__ just calls main()
+if __name__ == "__main__":
+    main(sys.argv)
