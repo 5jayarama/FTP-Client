@@ -16,10 +16,11 @@ Remove a remote directory.
 Upload a file to the server.
 Download a file from the server.
 Delete a file on the server.
+Move a file to and from the server.
 
 Prerequisites
 Python 3.x
-Internet connection (for accessing FTP servers)
+Access to FTP server
 Permission to access FTP servers
 
 How to use
@@ -33,13 +34,15 @@ rm <FTP_URL>: Delete a file on the FTP server.
 rmdir <FTP_URL>: Remove a directory on the FTP server.
 mkdir <FTP_URL>: Make a directory on the FTP server.
 cp <LOCAL_FILE_PATH> <FTP_URL>: Copy a file from the local machine to the FTP server.
+cp <FTP_URL> <LOCAL_FILE_PATH>: Copy a file from the FTP server to the local machine
+cp <LOCAL_FILE_PATH> <FTP_URL>: Move a file from the local machine to the FTP server.
+cp <FTP_URL> <LOCAL_FILE_PATH>: Move a file from the FTP server to the local machine
 
 Example Usage
 ./3700ftp ls ftp://adarshj:<password>@ftp.3700.network
 ./3700ftp mkdir ftp://adarshj:<password>@ftp.3700.network/test
-./3700ftp mkdir ftp://username:password@ftp.example.com/new_directory
-./3700ftp rm ftp://username:password@ftp.example.com/file_to_delete.txt
-./3700ftp cp local_file.txt ftp://username:password@ftp.example.com/remote_file.txt
+./3700ftp cp hw3.txt ftp://adarshj:f1aeda0b54830fdf0f3063b12b96f1649b079305ab63aeb44b3e39ac12efa3a5@ftp.3700.network/hw4.txt 
+./3700ftp cp ftp://adarshj:f1aeda0b54830fdf0f3063b12b96f1649b079305ab63aeb44b3e39ac12efa3a5@ftp.3700.network/hw3.txt hw4.txt
 
 Remember to replace username, password, and the ftp server with your own data. 
 
