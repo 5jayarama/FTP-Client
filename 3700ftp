@@ -218,7 +218,7 @@ def main(args):
         if isSecondFTP: # if second arg last is url
             print(ftp_url)
             print(directory_path)
-            client.retrieve_file(ftp_url, directory_path)
+            client.retrieve_file(directory_path, ftp_url)
         else: # if last arg is url
             print(source_dest)
             print(directory_path)
