@@ -95,20 +95,14 @@ class FTPClient:
         response = self.receive_response()
         print(response)
 
-        # Parse response to get IP and port for data channel
-        data_socket = self.create_data_channel(response)
-
-        print(local_path)
-
         # Transfer File Data
         with open(local_path, 'rb') as file: #opens the file in binary read(rb mode)
-            data_socket.sendall(file.read(1024)) #sends the file data in chunks of 1024 bytes to the server
-        
-        self.retrieve_file(remote_path, data_socket)
+            data = self.data_socket.recv(1024)
+            while data:
+                self.data_socket.sendall(data)
+                data = self.data_socket.recv(1024)
 
-        # Close Data Channel
-        data_socket.close()
-
+        self.retrieve_file(remote_path)
     # for filename in toFTP:
     # filePath = os.path.join(dirFTP, filename)
     # with open(filePath, "rb") as file:
@@ -131,7 +125,7 @@ class FTPClient:
         self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.data_socket.connect((data_ip, data_port))
 
-    def retrieve_file(self, remote_path, data_socket):
+    def retrieve_file(self, remote_path):
         # Use RETR command to retrieve data
         self.send_command(f'RETR {remote_path}')
         response = self.receive_response()
@@ -139,13 +133,10 @@ class FTPClient:
 
         # Receive File Data
         with open(remote_path, 'wb') as file: # opens a file in binary write mode
-            data = data_socket.recv(1024) #same logic as store file, but it writes the data
+            data = self.data_socket.recv(1024) #same logic as store file, but it writes the data
             while data:
                 file.write(data)
-                data = data_socket.recv(1024)
-
-        # Close Data Channel
-        data_socket.close()
+                data = self.data_socket.recv(1024)
 
     def delete_file(self, remote_path):
         #Use DELE command to delete a file
