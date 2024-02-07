@@ -98,14 +98,13 @@ class FTPClient:
         # Parse response to get IP and port for data channel
         data_socket = self.create_data_channel(response)
 
+        print(local_path)
+
         # Transfer File Data
         with open(local_path, 'rb') as file: #opens the file in binary read(rb mode)
-            data = file.read(1024)
-            while data:
-                data_socket.sendall(data) #sends the file data in chunks of 1024 bytes to the server
-                data = file.read(1024)
-
-        self.retrieve_file(remote_path)
+            data_socket.sendall(file.read(1024)) #sends the file data in chunks of 1024 bytes to the server
+        
+        self.retrieve_file(remote_path, data_socket)
 
         # Close Data Channel
         data_socket.close()
@@ -125,21 +124,18 @@ class FTPClient:
             data_ip = '.'.join(map(str, data_parts[:4])) #joins the first four parts with periods to reconstruct the ip
             data_port = (data_parts[4] << 8) + data_parts[5] #use remaining 5th and 6th parts to construct port
         except ValueError as e:
-            print(f"Error parsing: {e}") #throw error if parsing fauls
+            print(f"Error parsing response: {e}") #throw error if parsing fauls
             return None
 
         #create a new socket for the data channel, accessible in init for the list directory function
         self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.data_socket.connect((data_ip, data_port))
 
-    def retrieve_file(self, remote_path):
+    def retrieve_file(self, remote_path, data_socket):
         # Use RETR command to retrieve data
         self.send_command(f'RETR {remote_path}')
         response = self.receive_response()
         print(response)
-
-        # Parse response to get IP and port for data channel
-        data_socket = self.create_data_channel(response)
 
         # Receive File Data
         with open(remote_path, 'wb') as file: # opens a file in binary write mode
