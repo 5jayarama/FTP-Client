@@ -38,7 +38,7 @@ class FTPClient:
         response = ''
         while True:
             data = self.control_socket.recv(1024).decode()
-            response += data
+            response = data + response
             if not data or data[-2:] == '\r\n':
                 break
         return response
@@ -98,14 +98,19 @@ class FTPClient:
         data_socket = self.create_data_channel(response)
 
         # Transfer file data
-        with open(local_path, 'rb') as file:
+        with open(local_path, 'rb') as file: #opens the file in binary read(rb mode)
             data = file.read(1024)
-            while data:
+            while data: #sends the file data in chunks of 1024 bytes to the server
                 data_socket.sendall(data)
                 data = file.read(1024)
 
         # Close the data channel
         data_socket.close()
+
+    # for filename in toFTP:
+    # filePath = os.path.join(dirFTP, filename)
+    # with open(filePath, "rb") as file:
+    #     ftp.storbinary(f"STOR {filePath}", file)
 
     def create_data_channel(self, response):
         # Extract the IP address and port information from the response
@@ -204,30 +209,20 @@ def main(args):
     if command == 'ls':
         client.list_directory(directory_path)
     elif command == 'rm':
-        # Extract the file to be deleted from the provided URL
-        remote_file = os.path.basename(directory_path)
-        client.delete_file(remote_file)
+        client.delete_file(directory_path)
     elif command == 'rmdir':
         # Assuming the last component of the path is the directory to be removed
-        remote_directory = os.path.basename(directory_path)
-        client.remove_directory(remote_directory)
+        client.remove_directory(directory_path)
     elif command == 'mkdir':
         # Assuming the last component of the path is the directory to be created
-        new_directory = os.path.basename(directory_path)
-        client.make_directory(new_directory)
+        print(directory_path)
+        client.make_directory(directory_path)
     elif command == 'cp':
         # Extract the source and destination from the provided arguments
-        local_path, remote_path = source_dest, directory_path
-        client.store_file(local_path, remote_path)
-    elif command == 'store':
-        # Upload a file to the server
-        local_path, remote_path = source_dest, os.path.basename(source_dest)
-        client.store_file(local_path, remote_path)
-    elif command == 'retr':
-        # Download a file from the server
-        remote_file = os.path.basename(directory_path)
-        local_path = source_dest
-        client.retrieve_file(remote_file, local_path)
+        client.store_file(source_dest, directory_path)
+    elif command == 'mv':
+        client.store_file(source_dest, directory_path) #cp the file source -> dest
+        client.delete_file(source_dest) #delete the file from source 
     
     else:
         print("Invalid command")
