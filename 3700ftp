@@ -89,20 +89,18 @@ class FTPClient:
 
     #STORE, RETR, and DELE
     # i think store file should use retrieve local path, and Stor in remote path
-    def store_file(self, local_path, remote_path):
+    def store_file(self, source, destination):
         # Use STOR command to initiate data transfer
-        self.send_command(f'STOR {local_path}')
-        response = self.receive_response()
-        print(response)
-
+        self.send_command(f'STOR {destination}')
+        #response = self.receive_response()
+        #print(response)
         # Transfer File Data
-        with open(local_path, 'rb') as file: #opens the file in binary read(rb mode)
-            data = self.data_socket.recv(1024)
-            while data:
-                self.data_socket.sendall(data)
-                data = self.data_socket.recv(1024)
+        with open(source, 'rb') as file: #opens the file in binary read(rb mode)
+            self.data_socket.sendall(file.read())
 
-        self.retrieve_file(remote_path)
+        # self.retrieve_file(destination)
+
+
     # for filename in toFTP:
     # filePath = os.path.join(dirFTP, filename)
     # with open(filePath, "rb") as file:
@@ -125,14 +123,14 @@ class FTPClient:
         self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.data_socket.connect((data_ip, data_port))
 
-    def retrieve_file(self, remote_path):
+    def retrieve_file(self, source, destination):
         # Use RETR command to retrieve data
-        self.send_command(f'RETR {remote_path}')
-        response = self.receive_response()
-        print(response)
+        self.send_command(f'RETR {source}')
+        #response = self.receive_response()
+        #print(response)
 
         # Receive File Data
-        with open(remote_path, 'wb') as file: # opens a file in binary write mode
+        with open(destination, 'wb') as file: # opens a file in binary write mode
             data = self.data_socket.recv(1024) #same logic as store file, but it writes the data
             while data:
                 file.write(data)
@@ -170,13 +168,15 @@ def main(args):
         source_dest = args[2]
     ftp_url = args[-1] #last argument referred as -1
 
-    isSecondFTP = False
+    isSecondFTP = False #second last argument is the FTP URL
 
     #parse the provided ftp url (unsure how this works)
     parsed_url = urllib.parse.urlparse(ftp_url)
+    print(ftp_url)
     #error checking for parsing ftp url
     if parsed_url.scheme != 'ftp':
         parsed_url = urllib.parse.urlparse(source_dest)
+        print(source_dest)
         isSecondFTP = True
         if parsed_url.scheme != 'ftp':
             print("Parsing FTP URL failed. Please provide a valid FTP URL.")
@@ -215,14 +215,18 @@ def main(args):
         client.make_directory(directory_path)
     elif command == 'cp':
         # Extract the source and destination from the provided arguments
-        if isSecondFTP:
-            client.store_file(directory_path, source_dest)
-        else:
+        if isSecondFTP: # if second arg last is url
+            print(ftp_url)
+            print(directory_path)
+            client.retrieve_file(ftp_url, directory_path)
+        else: # if last arg is url
+            print(source_dest)
+            print(directory_path)
             client.store_file(source_dest, directory_path)
     elif command == 'mv':
-        if isSecondFTP:
-            client.store_file(directory_path, source_dest)
-        else:
+        if isSecondFTP: # if second arg last is url
+            client.retrieve_file(ftp_url, directory_path)
+        else: # if last arg is url
             client.store_file(source_dest, directory_path)
         client.delete_file(source_dest) #delete the file from source
 
