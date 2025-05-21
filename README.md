@@ -1,7 +1,8 @@
 **FTP Client**
 
 **What the program does:**
-This is an FTP Client that sends commands to an FTP server. The FTP server used for testing is ftp://ftp.3700.network. FTP is a client-server oriented protocol for uploading, downloading, and managing files. The FTP server will listen for incoming connections from clients and then execute their requests. 
+This is an FTP Client that sends commands to an FTP server. The FTP server used for testing is ftp://ftp.3700.network. 
+FTP is a client-server oriented protocol for uploading, downloading, and managing files. An FTP server will listen for incoming connections from clients and then execute their requests. 
 
 **Description:**
 This Python script provides an FTP client implementation for interacting with FTP servers. It supports basic FTP operations such as connecting to a server, logging in, listing directories, making/removing directories, uploading/downloading files, and deleting files.
